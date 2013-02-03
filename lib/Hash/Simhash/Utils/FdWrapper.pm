@@ -3,7 +3,7 @@ package Hash::Simhash::Utils::FdWrapper;
 use Moose;
 
 has c        => ( is => "rw", default => 0, );
-has fd       => (	is => "rw", );
+has fd       => ( is => "rw", );
 has cur_line => ( is => "rw", );
 
 sub next_line {
@@ -23,10 +23,10 @@ use Moose;
 
 has level      => ( is  => 'rw', );
 has class      => ( is  => 'rw', );
-has method     => (	is  => 'rw', );
-has message    => (	is  => 'rw', );
+has method     => ( is  => 'rw', );
+has message    => ( is  => 'rw', );
 has datetime   => ( is  => 'rw', isa => 'DateTime', );
-has stacktrace => (	is  => 'rw', isa => "ArrayRef[Str]",	default => sub { [] },);
+has stacktrace => ( is  => 'rw', isa => "ArrayRef[Str]",	default => sub { [] },);
 
 sub string {
 	my $self = shift;
