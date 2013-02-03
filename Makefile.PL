@@ -17,8 +17,8 @@ WriteMakefile(
         'Getopt::Long' => 0,
         'Moose' => 0,
         'AnyEvent' => 0,
-				'Inline::C' => 0,
-				'DBI' => 0,
+	'Inline::C' => 0,
+	'DBI' => 0,
     },
     BUILD_REQUIRES => {
     },
