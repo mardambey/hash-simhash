@@ -1,0 +1,83 @@
+#!/usr/bin/perl -w
+use strict;
+use warnings;
+use Getopt::Long;
+
+use Hash::Simhash qw(sh_simhash permutations);
+use Hash::Simhash::Database;
+use Hash::Simhash::Database::MySQLShard;
+use Hash::Simhash::Utils::FdWrapper;
+use Hash::Simhash::Parsers::StParser1;
+use Hash::Simhash::Parsers::StParser2;
+
+my $hamming_thresh = 3;
+my $hashbits = 64;
+
+sub usage {
+	print <<EOF
+usage: $0 
+
+Finds Java stacktraces from data sent into STDIN and store their simhashes
+across MySQL shards.
+
+EOF
+}
+
+
+my $dbh = DBI->connect("dbi:mysql:simhash;host=localhost", "root", "foobar", {RaiseError => 1, PrintError => 0});
+my $sth = $dbh->prepare("insert into simhash values (NULL, ?, ?)");
+
+sub sqlog {
+	my ($sh, $data) = @_;
+	$sth->execute($sh, $data);
+}
+
+my $result = GetOptions(
+	"help"      => sub { usage(); exit; });
+
+my $lines = 0;
+my $hits = 0;
+my $last_indic = undef;
+my $started = undef;
+
+my @parsers = (
+	Hash::Simhash::Parsers::StParser1->new,
+	Hash::Simhash::Parsers::StParser2->new,
+);
+
+# initialize all database shards, each shard has an id
+my @shards = map { Hash::Simhash::Database::MySQLShard->new(id => $_, dsn => "dbi:mysql:simhash;host=localhost", user => "root", pass => "foobar") } 0 .. $hashbits - 1;
+
+my $db = Hash::Simhash::Database->new({
+	shards => \@shards
+});
+
+my $fh = *STDIN;
+my $fd = Hash::Simhash::Utils::FdWrapper->new(fd => $fh);
+$fd->next_line;
+
+LINE:while ($fd->cur_line) {
+
+	foreach my $p (@parsers) {
+		if (my $st = $p->parse($fd)) {
+			my $str = $st->string_forhash;
+			my @tokens = split(/\s+/, $str);
+			my $sh = sh_simhash(\@tokens, scalar @tokens);
+			#sqlog($sh, $str);
+			my $p = permutations($sh, $hashbits);
+			if ($db->find($sh, $p, $hamming_thresh, $str)) {
+				printf("%s - Found hash for stack trace: '%s'\n", $sh, $st->message);
+			} else {
+				printf("%s - Adding new hash for stack trace: '%s'\n", $sh, $st->message);
+				$db->add($sh, $p, $str);
+			}
+
+			redo LINE;
+		}
+	}
+
+	$fd->next_line;
+}
+
+printf("lines processed: %s\n", $fd->c);
+
