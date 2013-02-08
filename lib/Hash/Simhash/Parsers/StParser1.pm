@@ -62,6 +62,13 @@ sub parse {
 			$level = $1;
 			$msg = $2;
 
+			# clean up stage
+			# strip numbers, they are usually id's or bytes etc.
+			$msg =~ s/-?\d+//g;
+			# strip out the profile's nickname in the following:
+			# In the profile Jennyqueen, the profile online
+			$msg =~ s/In the profile (\w+), the /In the profile NICK, the /;
+
 			$fd->next_line;
 
 			LAST: while ($fd->cur_line) {
