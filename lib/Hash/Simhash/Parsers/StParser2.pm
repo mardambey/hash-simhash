@@ -17,11 +17,16 @@ sub parse {
 	my ($self, $fd) = @_;
 	# 2013-01-02 00:16:13.994 INFO net.spy.memcached.transcoders.SerializingTranscoder:  Compressed java.util.ArrayList from 35682 to 6473
 	if ($fd->cur_line =~ /^(\d+-\d+-\d+\s\d+:\d+:\d+\.\d+)\s(.+)\s(.+):\s(.+)$/) {
+
+		# clean up stage
+		# strip numbers out, less noise
+		$_ = $4;
+
 		my $st = Stacktrace->new(
 			datetime => $self->parse_datetime($1),
 			level    => $2,
 			class    => $3,
-			message  => $4);
+			message  => s/\d+//g);
 
 		$fd->next_line;
 
